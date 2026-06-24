@@ -1,0 +1,15 @@
+# Python virtual environments
+venv/
+.venv/
+env/
+__pycache__/
+*.pyc
+
+# Local data files (keeps heavy datasets off GitHub)
+*.csv
+*.pcap
+*.json
+
+# IDE settings
+.vscode/
+.DS_Store
