@@ -13,3 +13,5 @@ __pycache__/
 # IDE settings
 .vscode/
 .DS_Store
+# Append this to your existing .gitignore file
+*.png
