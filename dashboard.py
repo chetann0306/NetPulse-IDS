@@ -38,6 +38,7 @@ def main_menu():
         print("[6] Execute Adversarial Concept Drift PCA Map")
         print("[7] Run Adaptive Monitoring & Retrain Trigger Loop")
         print("[8] Export High-Speed Static Rule Signatures")
+        print("[9] Generate Executive Security Audit Report")
         print("[0] Exit Dashboard")
         print("=" * 60)
         
@@ -93,13 +94,17 @@ def main_menu():
         elif choice == '8':
             import export_signatures
             export_signatures.run_signature_exporter()
+            
+        elif choice == '9':
+            import generate_report
+            generate_report.parse_logs_and_generate_report()
                 
         elif choice == '0':
             print("Shutting down NetPulse IDS Console. Stay secure!")
             break
             
         else:
-            print("Invalid selection. Please input a digit from 0 to 8.")
+            print("Invalid selection. Please input a digit from 0 to 9.")
             
         input("\nPress Enter to return to the main menu...")
 

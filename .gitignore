@@ -15,3 +15,5 @@ __pycache__/
 .DS_Store
 # Append this to your existing .gitignore file
 *.png
+# Open your .gitignore and add this line:
+netpulse_executive_summary.md
