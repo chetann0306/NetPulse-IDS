@@ -4,8 +4,11 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import recall_score
+from logger import log_incident
 
 def run_adaptive_ids_monitor():
+    log_incident("INFO", "Initializing NetPulse Adaptive Monitoring Engine Workflow...")
+    
     print("--- 1. Initial State: Training Baseline Model ---")
     df_historical = pd.read_csv("network_traffic_sample.csv")
     X = df_historical.drop(columns=['Label'])
@@ -25,6 +28,7 @@ def run_adaptive_ids_monitor():
     baseline_preds = model.predict(X_test_scaled)
     baseline_recall = recall_score(y_test, baseline_preds, average=None, labels=['DDoS'])[0]
     print(f"Baseline DDoS Detection Recall: {baseline_recall * 100:.2f}%")
+    log_incident("INFO", f"Baseline model deployed successfully. Historical DDoS Recall: {baseline_recall * 100:.2f}%")
 
     print("\n--- 2. Production Stage: Incoming Stealthy/Drifted Traffic ---")
     # Simulate fresh production traffic where attackers have modified their signatures
@@ -55,11 +59,11 @@ def run_adaptive_ids_monitor():
     # If detection capabilities for known categories drop below 80%, sound the alarm!
     THRESHOLD = 0.80
     if prod_recall < THRESHOLD:
-        print(f"\n[ALERT] Detection Recall ({prod_recall*100:.1f}%) has fallen below critical threshold ({THRESHOLD*100:.1f}%)!")
-        print("Executing Automated Retraining Trigger...")
+        log_incident("WARNING", f"Production DDoS detection recall fell to {prod_recall*100:.1f}%. Beneath acceptable security threshold criteria of {THRESHOLD*100:.1f}%.")
+        log_incident("INFO", "Executing automated model retraining sequence using fresh adversarial drift combinations.")
         
         print("\n--- 3. Adaptation Stage: Merging Datasets & Patching the Model ---")
-        # In production, an analyst would flag a few missed attacks, and we mix them into training 
+        # In production, an analyst would flag a few missed attacks, and we mix them into training
         X_combined = pd.concat([X_train, X_prod], ignore_index=True)
         y_combined = pd.concat([y_train, y_prod], ignore_index=True)
         
@@ -73,10 +77,12 @@ def run_adaptive_ids_monitor():
         X_prod_new_scaled = scaler.transform(X_prod)
         updated_preds = model.predict(X_prod_new_scaled)
         new_recall = recall_score(y_prod, updated_preds, average=None, labels=['DDoS'])[0]
+        
         print(f"\nSuccess! Updated Model DDoS Detection Recall: {new_recall * 100:.2f}%")
-        print("Adaptive patch successfully deployed to NetPulse engine.")
+        log_incident("INFO", f"Automated structural retraining complete. New detection recall covered and patched back to {new_recall * 100:.2f}%. Adaptive patch live.")
     else:
         print("\nSystem healthy. Continuing to monitor network streams.")
+        log_incident("INFO", "Production verification sweep clean. Monitoring metrics within valid threshold guidelines.")
 
 if __name__ == "__main__":
     run_adaptive_ids_monitor()
