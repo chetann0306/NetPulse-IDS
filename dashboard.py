@@ -4,62 +4,97 @@ import sys
 def clear_screen():
     os.system('cls' if os.name == 'nt' else 'clear')
 
+def get_target_file():
+    """
+    Helper function to dynamically detect available datasets and 
+    let the user decide which file to pass to the processing engines.
+    """
+    real_dataset = "Friday-WorkingHours-Afternoon-PortScan.csv"
+    synthetic_dataset = "network_traffic_sample.csv"
+    
+    if os.path.exists(real_dataset):
+        print("\nAvailable datasets detected in root:")
+        print(f"[1] Real Production Data ({real_dataset})")
+        print(f"[2] Synthetic Traffic Sample ({synthetic_dataset})")
+        
+        file_choice = input("Select dataset to target (default is 1): ").strip()
+        if file_choice == '2':
+            return synthetic_dataset
+        return real_dataset
+        
+    return synthetic_dataset
+
 def main_menu():
     while True:
         clear_screen()
-        print("=" * 50)
-        print("          NETPULSE IDS - MANAGEMENT DASHBOARD          ")
-        print("=" * 50)
+        print("=" * 60)
+        print("                NETPULSE IDS - CONTROL CENTER                ")
+        print("=" * 60)
         print("[1] Generate Synthetic Network Traffic Data")
-        print("[2] Run Core ML Pipeline (Random Forest baseline)")
-        print("[3] Run Advanced Balanced Pipeline (SMOTE)")
-        print("[4] Generate Feature Importance Visualizations")
-        print("[5] Execute Adversarial Concept Drift PCA Map")
-        print("[6] Run Adaptive Monitoring & Retrain Trigger Loop")
+        print("[2] Download Real-World CICIDS2017 Dataset (PortScan)")
+        print("[3] Run Core ML Pipeline (Clean/Standard Preprocessor)")
+        print("[4] Run Advanced Balanced Pipeline (SMOTE Handling)")
+        print("[5] Generate Feature Importance Visualizations")
+        print("[6] Execute Adversarial Concept Drift PCA Map")
+        print("[7] Run Adaptive Monitoring & Retrain Trigger Loop")
         print("[0] Exit Dashboard")
-        print("=" * 50)
+        print("=" * 60)
         
         choice = input("Select a module to execute: ").strip()
+        print("\n" + "-" * 60)
         
-        print("\n" + "-" * 50)
         if choice == '1':
             import generate_data
             generate_data.generate_mock_traffic()
+            
         elif choice == '2':
-            import pipeline
-            if not os.path.exists("network_traffic_sample.csv"):
-                print("[ERROR] Please run Option 1 first to generate data!")
-            else:
-                pipeline.run_netpulse_pipeline("network_traffic_sample.csv")
+            import download_dataset
+            download_dataset.fetch_cicids_subset()
+            
         elif choice == '3':
-            import pipeline_smote
-            if not os.path.exists("network_traffic_sample.csv"):
-                print("[ERROR] Please run Option 1 first to generate data!")
+            import pipeline
+            target = get_target_file()
+            if not os.path.exists(target):
+                print(f"[ERROR] Target file '{target}' missing! Run Option 1 or 2 first.")
             else:
-                pipeline_smote.run_smote_pipeline("network_traffic_sample.csv")
+                pipeline.run_netpulse_pipeline(target)
+                
         elif choice == '4':
-            import visualize
-            if not os.path.exists("network_traffic_sample.csv"):
-                print("[ERROR] Please run Option 1 first to generate data!")
+            import pipeline_smote
+            target = get_target_file()
+            if not os.path.exists(target):
+                print(f"[ERROR] Target file '{target}' missing! Run Option 1 or 2 first.")
             else:
-                visualize.plot_feature_importance("network_traffic_sample.csv")
+                pipeline_smote.run_smote_pipeline(target)
+                
         elif choice == '5':
-            import visualize_drift
-            if not os.path.exists("network_traffic_sample.csv"):
-                print("[ERROR] Please run Option 1 first to generate data!")
+            import visualize
+            target = get_target_file()
+            if not os.path.exists(target):
+                print(f"[ERROR] Target file '{target}' missing! Run Option 1 or 2 first.")
             else:
-                visualize_drift.run_drift_visualization()
+                visualize.plot_feature_importance(target)
+                
         elif choice == '6':
             if not os.path.exists("network_traffic_sample.csv"):
-                print("[ERROR] Please run Option 1 first to generate data!")
+                print("[ERROR] Drift simulation relies on 'network_traffic_sample.csv'. Please run Option 1 first.")
+            else:
+                import visualize_drift
+                visualize_drift.run_drift_visualization()
+                
+        elif choice == '7':
+            if not os.path.exists("network_traffic_sample.csv"):
+                print("[ERROR] Continuous monitoring framework relies on 'network_traffic_sample.csv'. Please run Option 1 first.")
             else:
                 import monitor_and_retrain
                 monitor_and_retrain.run_adaptive_ids_monitor()
+                
         elif choice == '0':
             print("Shutting down NetPulse IDS Console. Stay secure!")
             break
+            
         else:
-            print("Invalid selection. Try again.")
+            print("Invalid selection. Please input a digit from 0 to 7.")
             
         input("\nPress Enter to return to the main menu...")
 
