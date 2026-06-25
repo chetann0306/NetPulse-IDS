@@ -37,6 +37,7 @@ def main_menu():
         print("[5] Generate Feature Importance Visualizations")
         print("[6] Execute Adversarial Concept Drift PCA Map")
         print("[7] Run Adaptive Monitoring & Retrain Trigger Loop")
+        print("[8] Export High-Speed Static Rule Signatures")
         print("[0] Exit Dashboard")
         print("=" * 60)
         
@@ -89,12 +90,16 @@ def main_menu():
                 import monitor_and_retrain
                 monitor_and_retrain.run_adaptive_ids_monitor()
                 
+        elif choice == '8':
+            import export_signatures
+            export_signatures.run_signature_exporter()
+                
         elif choice == '0':
             print("Shutting down NetPulse IDS Console. Stay secure!")
             break
             
         else:
-            print("Invalid selection. Please input a digit from 0 to 7.")
+            print("Invalid selection. Please input a digit from 0 to 8.")
             
         input("\nPress Enter to return to the main menu...")
 
