@@ -1,0 +1,8 @@
+# =========================================================
+# NETPULSE IDS AUTOMATICALLY EXPORTED STATIC SIGNATURE RULES
+# Generated to alleviate live processing latency bottlenecks
+# =========================================================
+
+ALERT AUTOMATIC_RULE_1 IF: Fwd_Packet_Length_Mean <= 79.96 AND Flow_IAT_Mean <= 2.04 AND Flow_Duration > 4.62 -> ACTION: DROP_PACKET
+ALERT AUTOMATIC_RULE_2 IF: Fwd_Packet_Length_Mean <= 79.96 AND Flow_IAT_Mean <= 2.04 AND Flow_Duration <= 4.62 -> ACTION: DROP_PACKET
+ALERT AUTOMATIC_RULE_3 IF: Fwd_Packet_Length_Mean <= 79.96 AND Flow_IAT_Mean > 2.04 -> ACTION: DROP_PACKET

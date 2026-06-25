@@ -1,2 +1,4 @@
 2026-06-25 23:35:17 | [INFO] | NetPulse IDS Logging Core Engine successfully initialized.
 2026-06-25 23:35:17 | [CRITICAL] | Simulated intrusion spike vector detected on destination port 80!
+2026-06-25 23:41:40 | [INFO] | Compiling machine learning decision boundaries into static signatures...
+2026-06-25 23:41:40 | [INFO] | Successfully exported 3 lightweight signatures to 'netpulse_exported_signatures.rules'.
