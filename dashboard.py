@@ -5,10 +5,6 @@ def clear_screen():
     os.system('cls' if os.name == 'nt' else 'clear')
 
 def get_target_file():
-    """
-    Helper function to dynamically detect available datasets and 
-    let the user decide which file to pass to the processing engines.
-    """
     real_dataset = "Friday-WorkingHours-Afternoon-PortScan.csv"
     synthetic_dataset = "network_traffic_sample.csv"
     
@@ -39,6 +35,7 @@ def main_menu():
         print("[7] Run Adaptive Monitoring & Retrain Trigger Loop")
         print("[8] Export High-Speed Static Rule Signatures")
         print("[9] Generate Executive Security Audit Report")
+        print("[10] Run Deep Learning Sequential Engine (LSTM network)")
         print("[0] Exit Dashboard")
         print("=" * 60)
         
@@ -98,13 +95,21 @@ def main_menu():
         elif choice == '9':
             import generate_report
             generate_report.parse_logs_and_generate_report()
+            
+        elif choice == '10':
+            target = get_target_file()
+            if not os.path.exists(target):
+                print(f"[ERROR] Target file '{target}' missing! Run Option 1 or 2 first.")
+            else:
+                import pipeline_lstm
+                pipeline_lstm.run_lstm_pipeline(target)
                 
         elif choice == '0':
             print("Shutting down NetPulse IDS Console. Stay secure!")
             break
             
         else:
-            print("Invalid selection. Please input a digit from 0 to 9.")
+            print("Invalid selection. Please input a digit from 0 to 10.")
             
         input("\nPress Enter to return to the main menu...")
 
