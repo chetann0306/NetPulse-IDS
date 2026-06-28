@@ -1,4 +1,5 @@
 import os
+import json
 import pandas as pd
 import numpy as np
 import streamlit as st
@@ -18,6 +19,7 @@ import generate_report
 import pipeline_lstm
 import sniffer
 import packet_queue_manager
+import model_registry
 
 st.set_page_config(page_title="NetPulse IDS Hub", page_icon="🛡️", layout="wide")
 
@@ -32,14 +34,15 @@ operation = st.sidebar.selectbox(
         "1. Generate Synthetic Data",
         "2. Download Real Dataset (CICIDS2017)",
         "3. Run ML Pipeline Analytics",
-        "4. Run Deep Learning Sequence Engine (LSTM)",
-        "5. Start Live Sniffing & Real-Time ML Alerts",
-        "6. Asynchronous Multi-threaded Capture UI",
-        "7. Feature Importance Visualization",
-        "8. Adversarial PCA Drift Map",
-        "9. Adaptive Retraining Control Loop",
-        "10. Export Firewall Signatures",
-        "11. Compile Executive Audit Report"
+        "4. Model Registry & Version Rollbacks",
+        "5. Run Deep Learning Sequence Engine (LSTM)",
+        "6. Start Live Sniffing & Real-Time ML Alerts",
+        "7. Asynchronous Multi-threaded Capture UI",
+        "8. Feature Importance Visualization",
+        "9. Adversarial PCA Drift Map",
+        "10. Adaptive Retraining Control Loop",
+        "11. Export Firewall Signatures",
+        "12. Compile Executive Audit Report"
     ]
 )
 
@@ -107,7 +110,39 @@ elif operation == "3. Run ML Pipeline Analytics":
             sys.stdout = old_stdout
             st.text_area("Model Training Logs & Final Classification Audit", buffer.getvalue(), height=400)
 
-elif operation == "4. Run Deep Learning Sequence Engine (LSTM)":
+elif operation == "4. Model Registry & Version Rollbacks":
+    st.header("🗄️ Model Registry Manifest Auditing")
+    st.write("Tracks snapshot checkpoints serialized to disk and handles active production engine version switches.")
+    
+    model_registry.initialize_registry()
+    if os.path.exists(model_registry.MANIFEST_FILE):
+        with open(model_registry.MANIFEST_FILE, "r") as f:
+            manifest = json.load(f)
+            
+        active_v = manifest.get("active_version")
+        st.metric(label="Active Production Version", value=str(active_v))
+        
+        models_dict = manifest.get("models", {})
+        if models_dict:
+            # Transform JSON data dictionary to scannable pandas frame
+            df_manifest = pd.DataFrame.from_dict(models_dict, orient='index')
+            st.subheader("Saved Snapshot History Database")
+            st.dataframe(df_manifest)
+            
+            st.subheader("🔧 Trigger Version Switch Rollback")
+            available_versions = list(models_dict.keys())
+            selected_v = st.selectbox("Select target model version tag to activate:", available_versions, index=available_versions.index(active_v) if active_v in available_versions else 0)
+            
+            if st.button("Deploy Selected Version to Active Stream"):
+                manifest["active_version"] = selected_v
+                with open(model_registry.MANIFEST_FILE, "w") as f:
+                    json.dump(manifest, f, indent=4)
+                st.success(f"Production pipeline successfully swapped to engine version {selected_v}!")
+                st.rerun()
+        else:
+            st.info("No serialized snapshots found in the local registry files yet. Run standard training via Module 3 first.")
+
+elif operation == "5. Run Deep Learning Sequence Engine (LSTM)":
     st.header("🧬 Recurrent Neural Network Sequential Assessment")
     options = []
     if has_real: options.append("Real Production Data (CICIDS2017)")
@@ -126,12 +161,12 @@ elif operation == "4. Run Deep Learning Sequence Engine (LSTM)":
                 sys.stdout = old_stdout
                 st.text_area("PyTorch LSTM Recurrent Performance Matrix Logs", buffer.getvalue(), height=400)
 
-elif operation == "5. Start Live Sniffing & Real-Time ML Alerts":
+elif operation == "6. Start Live Sniffing & Real-Time ML Alerts":
     st.header("📡 Live Interface Network Sniffer & ML Evaluator")
     packets_to_sniff = st.slider("Select Packet Window Count to Capture:", min_value=20, max_value=500, value=100, step=20, key="single_sniff")
     
     if st.button("Engage Real-Time Packet Capture Loop"):
-        st.warning("Listening to live local card traffic interface... (Generate network activity to accelerate processing)")
+        st.warning("Listening to live local card traffic interface...")
         with st.spinner("Capturing live flow frames..."):
             old_stdout = sys.stdout
             sys.stdout = buffer = io.StringIO()
@@ -139,14 +174,12 @@ elif operation == "5. Start Live Sniffing & Real-Time ML Alerts":
             sys.stdout = old_stdout
             st.text_area("Real-Time ML Intrusion Detection Log Stream", buffer.getvalue(), height=400)
 
-elif operation == "6. Asynchronous Multi-threaded Capture UI":
+elif operation == "7. Asynchronous Multi-threaded Capture UI":
     st.header("🔀 Asynchronous Producer-Consumer Pipeline Dashboard")
-    st.write("Spins up concurrent parallel workers: one dedicated entirely to zero-loss wire listening, and another parsing background machine learning frames.")
-    
     parallel_packets = st.slider("Select Concurrent Packet Capture Size:", min_value=50, max_value=1000, value=200, step=50, key="multi_sniff")
     
     if st.button("Launch Concurrent Thread Pool"):
-        st.info("Spawning parallel threads. Wire ingestion active.")
+        st.info("Spawning parallel threads. Wire Ingestion active.")
         with st.spinner("Processing asynchronous queue pipelines..."):
             old_stdout = sys.stdout
             sys.stdout = buffer = io.StringIO()
@@ -154,7 +187,7 @@ elif operation == "6. Asynchronous Multi-threaded Capture UI":
             sys.stdout = old_stdout
             st.text_area("Multi-threaded Pipeline Execution Ledger", buffer.getvalue(), height=400)
 
-elif operation == "7. Feature Importance Visualization":
+elif operation == "8. Feature Importance Visualization":
     st.header("🎨 Interpretability Dashboard: Feature Rankings")
     target_file = "network_traffic_sample.csv" if has_synth else ("Friday-WorkingHours-Afternoon-PortScan.csv" if has_real else None)
     if not target_file:
@@ -166,7 +199,7 @@ elif operation == "7. Feature Importance Visualization":
                 if os.path.exists("feature_importance.png"):
                     st.image("feature_importance.png", caption="Model Feature Importance Chart")
 
-elif operation == "8. Adversarial Concept Drift PCA Map":
+elif operation == "9. Adversarial Concept Drift PCA Map":
     st.header("📉 Multi-dimensional Concept Drift Visualizer")
     if not has_synth:
         st.error("Please run Option 1 first. Drift vectors require the default baseline file structure.")
@@ -177,7 +210,7 @@ elif operation == "8. Adversarial Concept Drift PCA Map":
                 if os.path.exists("concept_drift_pca.png"):
                     st.image("concept_drift_pca.png", caption="Adversarial Vector Convergence Map")
 
-elif operation == "9. Adaptive Retraining Control Loop":
+elif operation == "10. Adaptive Retraining Control Loop":
     st.header("🔄 Self-Healing Telemetry Loop Dashboard")
     if not has_synth:
         st.error("Baseline dataset sample required to benchmark live drift transitions.")
@@ -189,7 +222,7 @@ elif operation == "9. Adaptive Retraining Control Loop":
             sys.stdout = old_stdout
             st.text_area("Self-Healing System Execution Matrix Logs", buffer.getvalue(), height=350)
 
-elif operation == "10. Export Firewall Signatures":
+elif operation == "11. Export Firewall Signatures":
     st.header("💾 High-Speed Low-Latency Signature Rule Builder")
     if st.button("Compile ML Boundaries Into Text Rules"):
         old_stdout = sys.stdout
@@ -201,7 +234,7 @@ elif operation == "10. Export Firewall Signatures":
             with open("netpulse_exported_signatures.rules", "r") as f:
                 st.code(f.read(), language="text")
 
-elif operation == "11. Compile Executive Audit Report":
+elif operation == "12. Compile Executive Audit Report":
     st.header("📄 Executive Security Audit Documentation Generator")
     if st.button("Parse Logs & Generate Executive Markdown"):
         generate_report.parse_logs_and_generate_report()
