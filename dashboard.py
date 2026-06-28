@@ -36,6 +36,7 @@ def main_menu():
         print("[8] Export High-Speed Static Rule Signatures")
         print("[9] Generate Executive Security Audit Report")
         print("[10] Run Deep Learning Sequential Engine (LSTM network)")
+        print("[11] Start Live Network Sniffing & Feature Extraction")
         print("[0] Exit Dashboard")
         print("=" * 60)
         
@@ -104,12 +105,17 @@ def main_menu():
                 import pipeline_lstm
                 pipeline_lstm.run_lstm_pipeline(target)
                 
+        elif choice == '11':
+            import sniffer
+            # Run a live capture session for 100 packets via console select
+            sniffer.start_live_sniffing(packet_count=100)
+                
         elif choice == '0':
             print("Shutting down NetPulse IDS Console. Stay secure!")
             break
             
         else:
-            print("Invalid selection. Please input a digit from 0 to 10.")
+            print("Invalid selection. Please input a digit from 0 to 11.")
             
         input("\nPress Enter to return to the main menu...")
 

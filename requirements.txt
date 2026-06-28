@@ -6,3 +6,4 @@ seaborn
 imbalanced-learn
 streamlit
 torch
+scapy
