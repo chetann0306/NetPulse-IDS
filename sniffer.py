@@ -1,18 +1,52 @@
+import os
 import time
-from scapy.all import sniff, IP, TCP, UDP
 import pandas as pd
+import numpy as np
+from scapy.all import sniff, IP, TCP, UDP
+from sklearn.preprocessing import StandardScaler
+from sklearn.ensemble import RandomForestClassifier
 from logger import log_incident
 
-# Global dictionary to track active network flows in-memory
-# Key structure: (Source_IP, Dest_IP, Source_Port, Dest_Port, Protocol)
+# Global structures to track active connections and the ML model components
 active_flows = {}
+trained_model = None
+data_scaler = None
+
+def train_and_initialize_live_model():
+    """Trains a baseline model on startup to handle live predictions immediately."""
+    global trained_model, data_scaler
+    log_incident("INFO", "Initializing live machine learning classification layers...")
+    
+    # Check if a training source is available; if not, generate mock data as a fallback
+    if not os.path.exists("network_traffic_sample.csv"):
+        import generate_data
+        generate_data.generate_mock_traffic()
+        
+    df = pd.read_csv("network_traffic_sample.csv")
+    df.columns = df.columns.str.strip()
+    
+    # Strip non-statistical metadata to match model footprint
+    forbidden_cols = ['Flow ID', 'Source IP', 'Source IP Address', 'Destination IP', 'Destination IP Address', 'Timestamp']
+    df.drop(columns=[col for col in forbidden_cols if col in df.columns], errors='ignore', inplace=True)
+    df.replace([np.inf, -np.inf], np.nan, inplace=True)
+    df.dropna(inplace=True)
+    
+    X = df.drop(columns=['Label'])
+    y = df['Label']
+    
+    # Fit the scaler and random forest model
+    data_scaler = StandardScaler()
+    X_scaled = data_scaler.fit_transform(X)
+    
+    trained_model = RandomForestClassifier(n_estimators=100, class_weight='balanced', random_state=42, n_jobs=-1)
+    trained_model.fit(X_scaled, y)
+    log_incident("INFO", "Live machine learning classification layers successfully armed.")
 
 def process_packet(packet):
     """Callback function executed for every intercepted raw packet."""
     if not packet.haslayer(IP):
         return
 
-    # Extract protocol type
     protocol = "OTHER"
     src_port = 0
     dst_port = 0
@@ -26,17 +60,14 @@ def process_packet(packet):
         src_port = packet[UDP].sport
         dst_port = packet[UDP].dport
 
-    # Extract basic packet metadata
     src_ip = packet[IP].src
     dst_ip = packet[IP].dst
     packet_length = len(packet)
     current_time = packet.time
 
-    # Generate unique bidirectional flow identifier keys
     flow_key = (src_ip, dst_ip, src_port, dst_port, protocol)
     reverse_key = (dst_ip, src_ip, dst_port, src_port, protocol)
 
-    # Check if this packet belongs to an existing active flow stream
     if flow_key in active_flows:
         target_key = flow_key
         is_forward = True
@@ -44,20 +75,18 @@ def process_packet(packet):
         target_key = reverse_key
         is_forward = False
     else:
-        # Initialize a brand new network flow tracking record
         active_flows[flow_key] = {
             'start_time': current_time,
             'last_time': current_time,
-            'fwd_packets': 1 if protocol != "OTHER" else 1,
+            'fwd_packets': 1,
             'bwd_packets': 0,
-            'fwd_lengths': [packet_length] if protocol != "OTHER" else [packet_length],
+            'fwd_lengths': [packet_length],
             'bwd_lengths': [],
             'iat_times': [],
             'dst_port': dst_port
         }
         return
 
-    # Update metrics for an existing flow stream
     flow = active_flows[target_key]
     iat = current_time - flow['last_time']
     flow['iat_times'].append(iat)
@@ -70,37 +99,53 @@ def process_packet(packet):
         flow['bwd_packets'] += 1
         flow['bwd_lengths'].append(packet_length)
 
-    # Evaluation Trigger: Once a flow collects 20 packets, compile its statistics
+    # Evaluate the connection once it accumulates 20 packets
     if (flow['fwd_packets'] + flow['bwd_packets']) >= 20:
-        compile_and_log_flow(target_key, flow)
-        # Flush from memory cache after processing
+        evaluate_live_flow_prediction(target_key, flow)
         del active_flows[target_key]
 
-def compile_and_log_flow(flow_key, flow_data):
-    """Transforms raw packet aggregates into structured ML features."""
-    duration = (flow_data['last_time'] - flow_data['start_time']) * 1000 # Milliseconds
+def evaluate_live_flow_prediction(flow_key, flow_data):
+    """Calculates flow statistics and runs live machine learning predictions."""
+    global trained_model, data_scaler
+    
+    duration = (flow_data['last_time'] - flow_data['start_time']) * 1000  # Milliseconds
     fwd_mean_len = sum(flow_data['fwd_lengths']) / len(flow_data['fwd_lengths']) if flow_data['fwd_lengths'] else 0
     mean_iat = (sum(flow_data['iat_times']) / len(flow_data['iat_times'])) * 1000 if flow_data['iat_times'] else 0
 
-    # Build feature structure dict matching model signatures
-    structured_flow = {
-        'Flow_Duration': duration,
-        'Total_Fwd_Packets': flow_data['fwd_packets'],
-        'Total_Bwd_Packets': flow_data['bwd_packets'],
-        'Fwd_Packet_Length_Mean': fwd_mean_len,
-        'Flow_IAT_Mean': mean_iat,
-        'Destination_Port': flow_data['dst_port']
-    }
+    # Build feature row array matching the training matrix signature precisely
+    # Order: Flow_Duration, Total_Fwd_Packets, Total_Bwd_Packets, Fwd_Packet_Length_Mean, Flow_IAT_Mean, Destination_Port
+    feature_row = np.array([[
+        duration,
+        flow_data['fwd_packets'],
+        flow_data['bwd_packets'],
+        fwd_mean_len,
+        mean_iat,
+        flow_data['dst_port']
+    ]])
     
-    msg = f"Live Flow Extracted | Src: {flow_key[0]} -> Dst: {flow_key[1]} | Port: {structured_flow['Destination_Port']} | Duration: {structured_flow['Flow_Duration']:.2f}ms"
-    log_incident("INFO", msg)
+    # Apply fitted standard scaling matrices
+    scaled_row = data_scaler.transform(feature_row)
+    
+    # Run prediction
+    prediction = trained_model.predict(scaled_row)[0]
+    
+    # Construct alert formatting
+    log_msg = f"LIVE DETECTION -> [Src: {flow_key[0]} -> Dst: {flow_key[1]} | Port: {flow_data['dst_port']}] -> CLASSIFICATION: {prediction}"
+    
+    if prediction == "BENIGN":
+        log_incident("INFO", log_msg)
+    else:
+        # Flag structural threat alerts with high priority status tags
+        log_incident("CRITICAL", f"🚨 ANOMALY BLOCKED! {log_msg}")
 
 def start_live_sniffing(packet_count=100):
+    # Auto-initialize model configurations before sniffing begins
+    if trained_model is None:
+        train_and_initialize_live_model()
+        
     log_incident("INFO", f"Starting live network packet interception layer. Capturing {packet_count} packets...")
-    # store=0 forces scapy to discard processed raw packets immediately to protect memory
     sniff(prn=process_packet, count=packet_count, store=0)
     log_incident("INFO", "Live network sniffing sweep complete.")
 
 if __name__ == "__main__":
-    # Test script locally by sniffing 50 packets on the active interface
     start_live_sniffing(packet_count=50)
