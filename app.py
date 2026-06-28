@@ -20,6 +20,7 @@ import pipeline_lstm
 import sniffer
 import packet_queue_manager
 import model_registry
+import threat_geo_mapper
 
 st.set_page_config(page_title="NetPulse IDS Hub", page_icon="🛡️", layout="wide")
 
@@ -42,7 +43,8 @@ operation = st.sidebar.selectbox(
         "9. Adversarial PCA Drift Map",
         "10. Adaptive Retraining Control Loop",
         "11. Export Firewall Signatures",
-        "12. Compile Executive Audit Report"
+        "12. Threat Geographic Mapping Radar",
+        "13. Compile Executive Audit Report"
     ]
 )
 
@@ -112,27 +114,20 @@ elif operation == "3. Run ML Pipeline Analytics":
 
 elif operation == "4. Model Registry & Version Rollbacks":
     st.header("🗄️ Model Registry Manifest Auditing")
-    st.write("Tracks snapshot checkpoints serialized to disk and handles active production engine version switches.")
-    
     model_registry.initialize_registry()
     if os.path.exists(model_registry.MANIFEST_FILE):
         with open(model_registry.MANIFEST_FILE, "r") as f:
             manifest = json.load(f)
-            
         active_v = manifest.get("active_version")
         st.metric(label="Active Production Version", value=str(active_v))
-        
         models_dict = manifest.get("models", {})
         if models_dict:
-            # Transform JSON data dictionary to scannable pandas frame
             df_manifest = pd.DataFrame.from_dict(models_dict, orient='index')
             st.subheader("Saved Snapshot History Database")
             st.dataframe(df_manifest)
-            
             st.subheader("🔧 Trigger Version Switch Rollback")
             available_versions = list(models_dict.keys())
             selected_v = st.selectbox("Select target model version tag to activate:", available_versions, index=available_versions.index(active_v) if active_v in available_versions else 0)
-            
             if st.button("Deploy Selected Version to Active Stream"):
                 manifest["active_version"] = selected_v
                 with open(model_registry.MANIFEST_FILE, "w") as f:
@@ -140,7 +135,7 @@ elif operation == "4. Model Registry & Version Rollbacks":
                 st.success(f"Production pipeline successfully swapped to engine version {selected_v}!")
                 st.rerun()
         else:
-            st.info("No serialized snapshots found in the local registry files yet. Run standard training via Module 3 first.")
+            st.info("No serialized snapshots found in the local registry files yet.")
 
 elif operation == "5. Run Deep Learning Sequence Engine (LSTM)":
     st.header("🧬 Recurrent Neural Network Sequential Assessment")
@@ -164,7 +159,6 @@ elif operation == "5. Run Deep Learning Sequence Engine (LSTM)":
 elif operation == "6. Start Live Sniffing & Real-Time ML Alerts":
     st.header("📡 Live Interface Network Sniffer & ML Evaluator")
     packets_to_sniff = st.slider("Select Packet Window Count to Capture:", min_value=20, max_value=500, value=100, step=20, key="single_sniff")
-    
     if st.button("Engage Real-Time Packet Capture Loop"):
         st.warning("Listening to live local card traffic interface...")
         with st.spinner("Capturing live flow frames..."):
@@ -177,7 +171,6 @@ elif operation == "6. Start Live Sniffing & Real-Time ML Alerts":
 elif operation == "7. Asynchronous Multi-threaded Capture UI":
     st.header("🔀 Asynchronous Producer-Consumer Pipeline Dashboard")
     parallel_packets = st.slider("Select Concurrent Packet Capture Size:", min_value=50, max_value=1000, value=200, step=50, key="multi_sniff")
-    
     if st.button("Launch Concurrent Thread Pool"):
         st.info("Spawning parallel threads. Wire Ingestion active.")
         with st.spinner("Processing asynchronous queue pipelines..."):
@@ -234,7 +227,39 @@ elif operation == "11. Export Firewall Signatures":
             with open("netpulse_exported_signatures.rules", "r") as f:
                 st.code(f.read(), language="text")
 
-elif operation == "12. Compile Executive Audit Report":
+elif operation == "12. Threat Geographic Mapping Radar":
+    st.header("🌍 Forensic Attack Distribution Map")
+    st.write("Extracts critical malicious source IP tags from operational history logs and displays their locations globally.")
+    
+    if st.button("Parse Forensic Logs & Refresh Map Coordinates"):
+        with st.spinner("Querying secure geolocation intelligence mirrors..."):
+            threat_geo_mapper.parse_logs_and_map_threats()
+            
+    if os.path.exists(threat_geo_mapper.GEO_REPORT_PATH):
+        with open(threat_geo_mapper.GEO_REPORT_PATH, "r") as f:
+            geo_data = json.load(f)
+            
+        if geo_data:
+            # Build a list of coordinate rows for plotting
+            map_points = []
+            for ip, info in geo_data.items():
+                if info["lat"] != 0.0 and info["lon"] != 0.0:
+                    map_points.append({"latitude": info["lat"], "longitude": info["lon"], "IP": ip, "Location": f"{info['city']}, {info['country']}"})
+            
+            if map_points:
+                df_map = pd.DataFrame(map_points)
+                st.subheader("Live Threat Location Plotter")
+                st.map(df_map) # Streamlit spatial geo map plotting layer
+                st.subheader("Geographic Intelligence Audit Log")
+                st.dataframe(df_map[["IP", "Location", "latitude", "longitude"]])
+            else:
+                st.info("Log database entries contain internal or non-routable private addresses (Local Subnets only).")
+        else:
+            st.info("Geographic manifest is currently empty.")
+    else:
+        st.info("No geographic registry log found. Click the button above to parse forensic logs.")
+
+elif operation == "13. Compile Executive Audit Report":
     st.header("📄 Executive Security Audit Documentation Generator")
     if st.button("Parse Logs & Generate Executive Markdown"):
         generate_report.parse_logs_and_generate_report()
