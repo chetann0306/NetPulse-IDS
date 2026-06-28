@@ -17,3 +17,5 @@ __pycache__/
 *.png
 # Open your .gitignore and add this line:
 netpulse_executive_summary.md
+# Exclude binary machine learning dumps from code tracking streams
+model_registry/
