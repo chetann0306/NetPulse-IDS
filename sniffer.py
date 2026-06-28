@@ -6,6 +6,7 @@ from scapy.all import sniff, IP, TCP, UDP
 from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestClassifier
 from logger import log_incident
+from firewall_blocker import block_malicious_ip
 
 # Global structures to track active connections and the ML model components
 active_flows = {}
@@ -13,11 +14,9 @@ trained_model = None
 data_scaler = None
 
 def train_and_initialize_live_model():
-    """Trains a baseline model on startup to handle live predictions immediately."""
     global trained_model, data_scaler
     log_incident("INFO", "Initializing live machine learning classification layers...")
     
-    # Check if a training source is available; if not, generate mock data as a fallback
     if not os.path.exists("network_traffic_sample.csv"):
         import generate_data
         generate_data.generate_mock_traffic()
@@ -25,7 +24,6 @@ def train_and_initialize_live_model():
     df = pd.read_csv("network_traffic_sample.csv")
     df.columns = df.columns.str.strip()
     
-    # Strip non-statistical metadata to match model footprint
     forbidden_cols = ['Flow ID', 'Source IP', 'Source IP Address', 'Destination IP', 'Destination IP Address', 'Timestamp']
     df.drop(columns=[col for col in forbidden_cols if col in df.columns], errors='ignore', inplace=True)
     df.replace([np.inf, -np.inf], np.nan, inplace=True)
@@ -34,7 +32,6 @@ def train_and_initialize_live_model():
     X = df.drop(columns=['Label'])
     y = df['Label']
     
-    # Fit the scaler and random forest model
     data_scaler = StandardScaler()
     X_scaled = data_scaler.fit_transform(X)
     
@@ -43,7 +40,6 @@ def train_and_initialize_live_model():
     log_incident("INFO", "Live machine learning classification layers successfully armed.")
 
 def process_packet(packet):
-    """Callback function executed for every intercepted raw packet."""
     if not packet.haslayer(IP):
         return
 
@@ -99,21 +95,17 @@ def process_packet(packet):
         flow['bwd_packets'] += 1
         flow['bwd_lengths'].append(packet_length)
 
-    # Evaluate the connection once it accumulates 20 packets
     if (flow['fwd_packets'] + flow['bwd_packets']) >= 20:
         evaluate_live_flow_prediction(target_key, flow)
         del active_flows[target_key]
 
 def evaluate_live_flow_prediction(flow_key, flow_data):
-    """Calculates flow statistics and runs live machine learning predictions."""
     global trained_model, data_scaler
     
-    duration = (flow_data['last_time'] - flow_data['start_time']) * 1000  # Milliseconds
+    duration = (flow_data['last_time'] - flow_data['start_time']) * 1000  
     fwd_mean_len = sum(flow_data['fwd_lengths']) / len(flow_data['fwd_lengths']) if flow_data['fwd_lengths'] else 0
     mean_iat = (sum(flow_data['iat_times']) / len(flow_data['iat_times'])) * 1000 if flow_data['iat_times'] else 0
 
-    # Build feature row array matching the training matrix signature precisely
-    # Order: Flow_Duration, Total_Fwd_Packets, Total_Bwd_Packets, Fwd_Packet_Length_Mean, Flow_IAT_Mean, Destination_Port
     feature_row = np.array([[
         duration,
         flow_data['fwd_packets'],
@@ -123,26 +115,22 @@ def evaluate_live_flow_prediction(flow_key, flow_data):
         flow_data['dst_port']
     ]])
     
-    # Apply fitted standard scaling matrices
     scaled_row = data_scaler.transform(feature_row)
-    
-    # Run prediction
     prediction = trained_model.predict(scaled_row)[0]
     
-    # Construct alert formatting
     log_msg = f"LIVE DETECTION -> [Src: {flow_key[0]} -> Dst: {flow_key[1]} | Port: {flow_data['dst_port']}] -> CLASSIFICATION: {prediction}"
     
     if prediction == "BENIGN":
         log_incident("INFO", log_msg)
     else:
-        # Flag structural threat alerts with high priority status tags
-        log_incident("CRITICAL", f"🚨 ANOMALY BLOCKED! {log_msg}")
+        log_incident("CRITICAL", f"🚨 ANOMALY FLAGGED! {log_msg}")
+        # ACTIVE DEFENSE TRIGGER: Pass the attacker source IP address (index 0 of the key) directly to the kernel blocker
+        attacker_ip = flow_key[0]
+        block_malicious_ip(attacker_ip)
 
 def start_live_sniffing(packet_count=100):
-    # Auto-initialize model configurations before sniffing begins
     if trained_model is None:
         train_and_initialize_live_model()
-        
     log_incident("INFO", f"Starting live network packet interception layer. Capturing {packet_count} packets...")
     sniff(prn=process_packet, count=packet_count, store=0)
     log_incident("INFO", "Live network sniffing sweep complete.")
