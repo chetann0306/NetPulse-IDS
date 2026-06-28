@@ -38,6 +38,7 @@ def main_menu():
         print("[10] Run Deep Learning Sequential Engine (LSTM network)")
         print("[11] Start Live Network Sniffing & Real-Time ML Alerts")
         print("[12] Launch Multi-threaded Asynchronous Queue Processing")
+        print("[13] Run Threat Geographic IP Mapping Audit")
         print("[0] Exit Dashboard")
         print("=" * 60)
         
@@ -113,13 +114,17 @@ def main_menu():
         elif choice == '12':
             import packet_queue_manager
             packet_queue_manager.run_multithreaded_capture(packet_count=150)
+            
+        elif choice == '13':
+            import threat_geo_mapper
+            threat_geo_mapper.parse_logs_and_map_threats()
                 
         elif choice == '0':
             print("Shutting down NetPulse IDS Console. Stay secure!")
             break
             
         else:
-            print("Invalid selection. Please input a digit from 0 to 12.")
+            print("Invalid selection. Please input a digit from 0 to 13.")
             
         input("\nPress Enter to return to the main menu...")
 
