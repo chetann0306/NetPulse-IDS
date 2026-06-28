@@ -17,6 +17,7 @@ import export_signatures
 import generate_report
 import pipeline_lstm
 import sniffer
+import packet_queue_manager
 
 st.set_page_config(page_title="NetPulse IDS Hub", page_icon="🛡️", layout="wide")
 
@@ -33,11 +34,12 @@ operation = st.sidebar.selectbox(
         "3. Run ML Pipeline Analytics",
         "4. Run Deep Learning Sequence Engine (LSTM)",
         "5. Start Live Sniffing & Real-Time ML Alerts",
-        "6. Feature Importance Visualization",
-        "7. Adversarial PCA Drift Map",
-        "8. Adaptive Retraining Control Loop",
-        "9. Export Firewall Signatures",
-        "10. Compile Executive Audit Report"
+        "6. Asynchronous Multi-threaded Capture UI",
+        "7. Feature Importance Visualization",
+        "8. Adversarial PCA Drift Map",
+        "9. Adaptive Retraining Control Loop",
+        "10. Export Firewall Signatures",
+        "11. Compile Executive Audit Report"
     ]
 )
 
@@ -126,23 +128,33 @@ elif operation == "4. Run Deep Learning Sequence Engine (LSTM)":
 
 elif operation == "5. Start Live Sniffing & Real-Time ML Alerts":
     st.header("📡 Live Interface Network Sniffer & ML Evaluator")
-    st.write("Hooks directly into the interface card, reads packets, builds bidirectional conversation features, and runs live inference classification loops.")
-    
-    packets_to_sniff = st.slider("Select Packet Window Count to Capture:", min_value=20, max_value=500, value=100, step=20)
+    packets_to_sniff = st.slider("Select Packet Window Count to Capture:", min_value=20, max_value=500, value=100, step=20, key="single_sniff")
     
     if st.button("Engage Real-Time Packet Capture Loop"):
-        st.warning("Listening to live local card traffic interface... (Generate some network traffic like opening a web page to feed the stream faster)")
+        st.warning("Listening to live local card traffic interface... (Generate network activity to accelerate processing)")
         with st.spinner("Capturing live flow frames..."):
             old_stdout = sys.stdout
             sys.stdout = buffer = io.StringIO()
-            
-            # Spin up the sniffer model architecture and run capture
             sniffer.start_live_sniffing(packet_count=packets_to_sniff)
-            
             sys.stdout = old_stdout
             st.text_area("Real-Time ML Intrusion Detection Log Stream", buffer.getvalue(), height=400)
 
-elif operation == "6. Feature Importance Visualization":
+elif operation == "6. Asynchronous Multi-threaded Capture UI":
+    st.header("🔀 Asynchronous Producer-Consumer Pipeline Dashboard")
+    st.write("Spins up concurrent parallel workers: one dedicated entirely to zero-loss wire listening, and another parsing background machine learning frames.")
+    
+    parallel_packets = st.slider("Select Concurrent Packet Capture Size:", min_value=50, max_value=1000, value=200, step=50, key="multi_sniff")
+    
+    if st.button("Launch Concurrent Thread Pool"):
+        st.info("Spawning parallel threads. Wire ingestion active.")
+        with st.spinner("Processing asynchronous queue pipelines..."):
+            old_stdout = sys.stdout
+            sys.stdout = buffer = io.StringIO()
+            packet_queue_manager.run_multithreaded_capture(packet_count=parallel_packets)
+            sys.stdout = old_stdout
+            st.text_area("Multi-threaded Pipeline Execution Ledger", buffer.getvalue(), height=400)
+
+elif operation == "7. Feature Importance Visualization":
     st.header("🎨 Interpretability Dashboard: Feature Rankings")
     target_file = "network_traffic_sample.csv" if has_synth else ("Friday-WorkingHours-Afternoon-PortScan.csv" if has_real else None)
     if not target_file:
@@ -154,7 +166,7 @@ elif operation == "6. Feature Importance Visualization":
                 if os.path.exists("feature_importance.png"):
                     st.image("feature_importance.png", caption="Model Feature Importance Chart")
 
-elif operation == "7. Adversarial Concept Drift PCA Map":
+elif operation == "8. Adversarial Concept Drift PCA Map":
     st.header("📉 Multi-dimensional Concept Drift Visualizer")
     if not has_synth:
         st.error("Please run Option 1 first. Drift vectors require the default baseline file structure.")
@@ -165,7 +177,7 @@ elif operation == "7. Adversarial Concept Drift PCA Map":
                 if os.path.exists("concept_drift_pca.png"):
                     st.image("concept_drift_pca.png", caption="Adversarial Vector Convergence Map")
 
-elif operation == "8. Adaptive Retraining Control Loop":
+elif operation == "9. Adaptive Retraining Control Loop":
     st.header("🔄 Self-Healing Telemetry Loop Dashboard")
     if not has_synth:
         st.error("Baseline dataset sample required to benchmark live drift transitions.")
@@ -177,7 +189,7 @@ elif operation == "8. Adaptive Retraining Control Loop":
             sys.stdout = old_stdout
             st.text_area("Self-Healing System Execution Matrix Logs", buffer.getvalue(), height=350)
 
-elif operation == "9. Export Firewall Signatures":
+elif operation == "10. Export Firewall Signatures":
     st.header("💾 High-Speed Low-Latency Signature Rule Builder")
     if st.button("Compile ML Boundaries Into Text Rules"):
         old_stdout = sys.stdout
@@ -189,7 +201,7 @@ elif operation == "9. Export Firewall Signatures":
             with open("netpulse_exported_signatures.rules", "r") as f:
                 st.code(f.read(), language="text")
 
-elif operation == "10. Compile Executive Audit Report":
+elif operation == "11. Compile Executive Audit Report":
     st.header("📄 Executive Security Audit Documentation Generator")
     if st.button("Parse Logs & Generate Executive Markdown"):
         generate_report.parse_logs_and_generate_report()
