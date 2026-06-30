@@ -22,6 +22,7 @@ import packet_queue_manager
 import model_registry
 import threat_geo_mapper
 import auth_manager
+import metrics_engine
 
 st.set_page_config(page_title="NetPulse IDS Hub", page_icon="🛡️", layout="wide")
 
@@ -48,13 +49,13 @@ if not st.session_state["authenticated"]:
                 st.rerun()
             else:
                 st.error("Access Denied. Invalid credential signature combination.")
-    st.stop() # Freeze rendering here if the session is unauthenticated
+    st.stop()
 
-# --- SECURED APPLICATION REGION (AUTHENTICATED ONLY) ---
+# --- SECURED APPLICATION REGION ---
 user_role = st.session_state["user_role"]
 
 st.title("🛡️ NetPulse IDS - Interactive Security Control Center")
-st.markdown(f"Logged in as: **{user_role}** Profile | [Logout Action]")
+st.markdown(f"Logged in as: **{user_role}** Profile")
 
 if st.sidebar.button("Logout of System"):
     st.session_state["authenticated"] = False
@@ -64,10 +65,8 @@ if st.sidebar.button("Logout of System"):
 st.sidebar.markdown("---")
 st.sidebar.header("🕹️ Module Operations")
 
-# Dynamic Menu Allocation based on Role-Based Guardrails
 menu_options = ["System Overview & Data Status"]
 
-# Analyst Roles get read-only analytics and reports
 if user_role in ["Admin", "Analyst"]:
     menu_options.extend([
         "3. Run ML Pipeline Analytics",
@@ -77,7 +76,6 @@ if user_role in ["Admin", "Analyst"]:
         "13. Compile Executive Audit Report"
     ])
 
-# Admin Roles get write/execution access to model weights and network sockets
 if user_role == "Admin":
     menu_options.extend([
         "1. Generate Synthetic Data",
@@ -90,7 +88,6 @@ if user_role == "Admin":
         "11. Export Firewall Signatures"
     ])
 
-# Alphabetize/sort options cleanly while keeping Overview at index 0
 overview = [menu_options[0]]
 rest = sorted(menu_options[1:])
 menu_options = overview + rest
@@ -107,7 +104,28 @@ has_synth, has_real = get_file_status()
 # --- OPERATION PATHWAYS ---
 
 if operation == "System Overview & Data Status":
-    st.header("📊 Environmental Diagnostics")
+    st.header("📊 Executive Telemetry Hub")
+    
+    # Generate live telemetry dataset figures
+    live_metrics = metrics_engine.compute_realtime_dashboard_metrics()
+    
+    # Display performance metrics across a 4-column layout matrix
+    m_col1, m_col2, m_col3, m_col4 = st.columns(4)
+    with m_col1:
+        st.metric(label="Total Connections Processed", value=f"{live_metrics['total_flows_processed']:,}")
+    with m_col2:
+        st.metric(label="Detected Malicious Attack Vectors", value=f"{live_metrics['threat_count']:,}")
+    with m_col3:
+        st.metric(label="Average Flow Duration", value=f"{live_metrics['avg_flow_duration_ms']:.1f} ms")
+    with m_col4:
+        # Dynamic warning color tag swaps based on real-time threat state indexes
+        if "Attack" in live_metrics["system_status"]:
+            st.metric(label="Infrastructure Health Status", value=live_metrics["system_status"], delta="- Danger", delta_color="inverse")
+        else:
+            st.metric(label="Infrastructure Health Status", value=live_metrics["system_status"], delta="Normal")
+
+    st.markdown("---")
+    st.header("📋 Environmental Diagnostics")
     col1, col2 = st.columns(2)
     with col1:
         st.subheader("Synthetic Traffic Profile")
