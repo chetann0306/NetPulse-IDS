@@ -21,32 +21,81 @@ import sniffer
 import packet_queue_manager
 import model_registry
 import threat_geo_mapper
+import auth_manager
 
 st.set_page_config(page_title="NetPulse IDS Hub", page_icon="🛡️", layout="wide")
 
-st.title("🛡️ NetPulse IDS - Interactive Security Control Center")
-st.markdown("An adaptive Machine Learning framework built to counter network anomalies, adversarial concept drift, and severe class imbalances.")
+# --- USER AUTHENTICATION STATE TRACKING ---
+if "authenticated" not in st.session_state:
+    st.session_state["authenticated"] = False
+    st.session_state["user_role"] = None
 
+if not st.session_state["authenticated"]:
+    st.title("🔒 NetPulse IDPS - Gatekeeper Secure Login")
+    st.markdown("Authorized Security Personnel Only. Access attempts are recorded inside the immutable operational log ledger.")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        login_user = st.text_input("Username:")
+        login_pass = st.text_input("Password:", type="password")
+        
+        if st.button("Authenticate and Enter Console"):
+            success, role = auth_manager.authenticate_user(login_user, login_pass)
+            if success:
+                st.session_state["authenticated"] = True
+                st.session_state["user_role"] = role
+                st.success(f"Access Granted. Profile Role: {role}")
+                st.rerun()
+            else:
+                st.error("Access Denied. Invalid credential signature combination.")
+    st.stop() # Freeze rendering here if the session is unauthenticated
+
+# --- SECURED APPLICATION REGION (AUTHENTICATED ONLY) ---
+user_role = st.session_state["user_role"]
+
+st.title("🛡️ NetPulse IDS - Interactive Security Control Center")
+st.markdown(f"Logged in as: **{user_role}** Profile | [Logout Action]")
+
+if st.sidebar.button("Logout of System"):
+    st.session_state["authenticated"] = False
+    st.session_state["user_role"] = None
+    st.rerun()
+
+st.sidebar.markdown("---")
 st.sidebar.header("🕹️ Module Operations")
-operation = st.sidebar.selectbox(
-    "Choose a system component to execute:",
-    [
-        "System Overview & Data Status",
+
+# Dynamic Menu Allocation based on Role-Based Guardrails
+menu_options = ["System Overview & Data Status"]
+
+# Analyst Roles get read-only analytics and reports
+if user_role in ["Admin", "Analyst"]:
+    menu_options.extend([
+        "3. Run ML Pipeline Analytics",
+        "8. Feature Importance Visualization",
+        "9. Adversarial PCA Drift Map",
+        "12. Threat Geographic Mapping Radar",
+        "13. Compile Executive Audit Report"
+    ])
+
+# Admin Roles get write/execution access to model weights and network sockets
+if user_role == "Admin":
+    menu_options.extend([
         "1. Generate Synthetic Data",
         "2. Download Real Dataset (CICIDS2017)",
-        "3. Run ML Pipeline Analytics",
         "4. Model Registry & Version Rollbacks",
         "5. Run Deep Learning Sequence Engine (LSTM)",
         "6. Start Live Sniffing & Real-Time ML Alerts",
         "7. Asynchronous Multi-threaded Capture UI",
-        "8. Feature Importance Visualization",
-        "9. Adversarial PCA Drift Map",
         "10. Adaptive Retraining Control Loop",
-        "11. Export Firewall Signatures",
-        "12. Threat Geographic Mapping Radar",
-        "13. Compile Executive Audit Report"
-    ]
-)
+        "11. Export Firewall Signatures"
+    ])
+
+# Alphabetize/sort options cleanly while keeping Overview at index 0
+overview = [menu_options[0]]
+rest = sorted(menu_options[1:])
+menu_options = overview + rest
+
+operation = st.sidebar.selectbox("Choose an authorized system component to execute:", menu_options)
 
 def get_file_status():
     has_synthetic = os.path.exists("network_traffic_sample.csv")
@@ -229,8 +278,6 @@ elif operation == "11. Export Firewall Signatures":
 
 elif operation == "12. Threat Geographic Mapping Radar":
     st.header("🌍 Forensic Attack Distribution Map")
-    st.write("Extracts critical malicious source IP tags from operational history logs and displays their locations globally.")
-    
     if st.button("Parse Forensic Logs & Refresh Map Coordinates"):
         with st.spinner("Querying secure geolocation intelligence mirrors..."):
             threat_geo_mapper.parse_logs_and_map_threats()
@@ -238,26 +285,23 @@ elif operation == "12. Threat Geographic Mapping Radar":
     if os.path.exists(threat_geo_mapper.GEO_REPORT_PATH):
         with open(threat_geo_mapper.GEO_REPORT_PATH, "r") as f:
             geo_data = json.load(f)
-            
         if geo_data:
-            # Build a list of coordinate rows for plotting
             map_points = []
             for ip, info in geo_data.items():
                 if info["lat"] != 0.0 and info["lon"] != 0.0:
                     map_points.append({"latitude": info["lat"], "longitude": info["lon"], "IP": ip, "Location": f"{info['city']}, {info['country']}"})
-            
             if map_points:
                 df_map = pd.DataFrame(map_points)
                 st.subheader("Live Threat Location Plotter")
-                st.map(df_map) # Streamlit spatial geo map plotting layer
+                st.map(df_map)
                 st.subheader("Geographic Intelligence Audit Log")
                 st.dataframe(df_map[["IP", "Location", "latitude", "longitude"]])
             else:
-                st.info("Log database entries contain internal or non-routable private addresses (Local Subnets only).")
+                st.info("Log database entries contain internal or non-routable private addresses.")
         else:
             st.info("Geographic manifest is currently empty.")
     else:
-        st.info("No geographic registry log found. Click the button above to parse forensic logs.")
+        st.info("No geographic registry log found.")
 
 elif operation == "13. Compile Executive Audit Report":
     st.header("📄 Executive Security Audit Documentation Generator")
