@@ -20,3 +20,4 @@ netpulse_executive_summary.md
 # Exclude binary machine learning dumps from code tracking streams
 model_registry/
 netpulse_users.json
+netpulse_heartbeat.json

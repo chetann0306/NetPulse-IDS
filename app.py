@@ -23,6 +23,7 @@ import model_registry
 import threat_geo_mapper
 import auth_manager
 import metrics_engine
+import system_heartbeat
 
 st.set_page_config(page_title="NetPulse IDS Hub", page_icon="🛡️", layout="wide")
 
@@ -106,8 +107,18 @@ has_synth, has_real = get_file_status()
 if operation == "System Overview & Data Status":
     st.header("📊 Executive Telemetry Hub")
     
-    # Generate live telemetry dataset figures
+    # Generate live telemetry and trigger system watchdog pulse
+    heartbeat_pulse = system_heartbeat.perform_system_health_audit()
     live_metrics = metrics_engine.compute_realtime_dashboard_metrics()
+    
+    # System Status Row Colors
+    status_color = "green"
+    if heartbeat_pulse["status"] == "WARNING":
+        status_color = "orange"
+    elif heartbeat_pulse["status"] in ["DEGRADED", "CRITICAL_FAILURE"]:
+        status_color = "red"
+        
+    st.markdown(f"### Watchdog Pulse: :{status_color}[{heartbeat_pulse['status']}] (PID: {heartbeat_pulse['pid']})")
     
     # Display performance metrics across a 4-column layout matrix
     m_col1, m_col2, m_col3, m_col4 = st.columns(4)
@@ -118,11 +129,10 @@ if operation == "System Overview & Data Status":
     with m_col3:
         st.metric(label="Average Flow Duration", value=f"{live_metrics['avg_flow_duration_ms']:.1f} ms")
     with m_col4:
-        # Dynamic warning color tag swaps based on real-time threat state indexes
-        if "Attack" in live_metrics["system_status"]:
-            st.metric(label="Infrastructure Health Status", value=live_metrics["system_status"], delta="- Danger", delta_color="inverse")
-        else:
-            st.metric(label="Infrastructure Health Status", value=live_metrics["system_status"], delta="Normal")
+        st.metric(label="Memory Footprint", value=f"{heartbeat_pulse['memory_footprint_mb']} MB")
+
+    if heartbeat_pulse["diagnostics"]:
+        st.info(f"**Diagnostic Output:** {heartbeat_pulse['diagnostics'][0]}")
 
     st.markdown("---")
     st.header("📋 Environmental Diagnostics")
