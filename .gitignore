@@ -21,3 +21,4 @@ netpulse_executive_summary.md
 model_registry/
 netpulse_users.json
 netpulse_heartbeat.json
+netpulse_firewall_leases.json

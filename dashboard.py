@@ -39,6 +39,7 @@ def main_menu():
         print("[11] Start Live Network Sniffing & Real-Time ML Alerts")
         print("[12] Launch Multi-threaded Asynchronous Queue Processing")
         print("[13] Run Threat Geographic IP Mapping Audit")
+        print("[14] Execute Firewall Lease Pruning & Table Sweep")
         print("[0] Exit Dashboard")
         print("=" * 60)
         
@@ -118,13 +119,17 @@ def main_menu():
         elif choice == '13':
             import threat_geo_mapper
             threat_geo_mapper.parse_logs_and_map_threats()
+            
+        elif choice == '14':
+            import firewall_pruner
+            firewall_pruner.prune_expired_firewall_rules()
                 
         elif choice == '0':
             print("Shutting down NetPulse IDS Console. Stay secure!")
             break
             
         else:
-            print("Invalid selection. Please input a digit from 0 to 13.")
+            print("Invalid selection. Please input a digit from 0 to 14.")
             
         input("\nPress Enter to return to the main menu...")
 
