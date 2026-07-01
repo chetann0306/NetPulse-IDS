@@ -25,6 +25,7 @@ import auth_manager
 import metrics_engine
 import system_heartbeat
 import firewall_pruner
+import run_integration_tests
 
 st.set_page_config(page_title="NetPulse IDS Hub", page_icon="🛡️", layout="wide")
 
@@ -88,7 +89,8 @@ if user_role == "Admin":
         "7. Asynchronous Multi-threaded Capture UI",
         "10. Adaptive Retraining Control Loop",
         "11. Export Firewall Signatures",
-        "14. Active Firewall Lease Manager"
+        "14. Active Firewall Lease Manager",
+        "15. Automated System Integration Tests"
     ])
 
 overview = [menu_options[0]]
@@ -332,8 +334,6 @@ elif operation == "12. Threat Geographic Mapping Radar":
 
 elif operation == "14. Active Firewall Lease Manager":
     st.header("🧱 Active Firewall Lease Configuration Control")
-    st.write("Tracks time-to-live (TTL) allocations applied to blocked threat nodes and manages active rule removals.")
-    
     if st.button("Execute Active Table Pruning Sweep"):
         with st.spinner("Sweeping operating system firewall tables..."):
             old_stdout = sys.stdout
@@ -356,6 +356,20 @@ elif operation == "14. Active Firewall Lease Manager":
             st.info("No active firewall IP ban leases recorded in the database manifest.")
     else:
         st.info("No active firewall tracking manifest found on disk.")
+
+elif operation == "15. Automated System Integration Tests":
+    st.header("🧪 Automated System-Wide Integration Diagnostics")
+    st.write("Triggers a serial suite of module verifications to confirm full pipeline synergy programmatically.")
+    
+    if st.button("Execute Verification Framework Suite"):
+        with st.spinner("Evaluating architecture modules..."):
+            old_stdout = sys.stdout
+            sys.stdout = buffer = io.StringIO()
+            
+            run_integration_tests.execute_netpulse_test_suite()
+            
+            sys.stdout = old_stdout
+            st.text_area("Integration Test Engine Execution Output Logs", buffer.getvalue(), height=450)
 
 elif operation == "13. Compile Executive Audit Report":
     st.header("📄 Executive Security Audit Documentation Generator")
