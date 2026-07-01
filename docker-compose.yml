@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  netpulse-idps:
+    build: .
+    container_name: netpulse_idps_container
+    ports:
+      - "8501:8501"
+    # CRITICAL SECURITY FLAG: Allows the container direct access to the host NIC cards for live packet sniffing
+    network_mode: "host"
+    # Grant extended privileges so containerized iptables/netsh hooks can inject kernel rules
+    privileged: true
+    volumes:
+      - .:/app
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
