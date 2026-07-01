@@ -24,6 +24,7 @@ import threat_geo_mapper
 import auth_manager
 import metrics_engine
 import system_heartbeat
+import firewall_pruner
 
 st.set_page_config(page_title="NetPulse IDS Hub", page_icon="🛡️", layout="wide")
 
@@ -86,7 +87,8 @@ if user_role == "Admin":
         "6. Start Live Sniffing & Real-Time ML Alerts",
         "7. Asynchronous Multi-threaded Capture UI",
         "10. Adaptive Retraining Control Loop",
-        "11. Export Firewall Signatures"
+        "11. Export Firewall Signatures",
+        "14. Active Firewall Lease Manager"
     ])
 
 overview = [menu_options[0]]
@@ -107,11 +109,9 @@ has_synth, has_real = get_file_status()
 if operation == "System Overview & Data Status":
     st.header("📊 Executive Telemetry Hub")
     
-    # Generate live telemetry and trigger system watchdog pulse
     heartbeat_pulse = system_heartbeat.perform_system_health_audit()
     live_metrics = metrics_engine.compute_realtime_dashboard_metrics()
     
-    # System Status Row Colors
     status_color = "green"
     if heartbeat_pulse["status"] == "WARNING":
         status_color = "orange"
@@ -120,7 +120,6 @@ if operation == "System Overview & Data Status":
         
     st.markdown(f"### Watchdog Pulse: :{status_color}[{heartbeat_pulse['status']}] (PID: {heartbeat_pulse['pid']})")
     
-    # Display performance metrics across a 4-column layout matrix
     m_col1, m_col2, m_col3, m_col4 = st.columns(4)
     with m_col1:
         st.metric(label="Total Connections Processed", value=f"{live_metrics['total_flows_processed']:,}")
@@ -330,6 +329,33 @@ elif operation == "12. Threat Geographic Mapping Radar":
             st.info("Geographic manifest is currently empty.")
     else:
         st.info("No geographic registry log found.")
+
+elif operation == "14. Active Firewall Lease Manager":
+    st.header("🧱 Active Firewall Lease Configuration Control")
+    st.write("Tracks time-to-live (TTL) allocations applied to blocked threat nodes and manages active rule removals.")
+    
+    if st.button("Execute Active Table Pruning Sweep"):
+        with st.spinner("Sweeping operating system firewall tables..."):
+            old_stdout = sys.stdout
+            sys.stdout = buffer = io.StringIO()
+            firewall_pruner.prune_expired_firewall_rules()
+            sys.stdout = old_stdout
+            st.text_area("Pruner Execution Output Logs", buffer.getvalue(), height=150)
+
+    if os.path.exists(firewall_pruner.LEASES_MANIFEST_FILE):
+        with open(firewall_pruner.LEASES_MANIFEST_FILE, "r") as f:
+            try:
+                leases_data = json.load(f)
+            except json.JSONDecodeError:
+                leases_data = {}
+        if leases_data:
+            df_leases = pd.DataFrame.from_dict(leases_data, orient='index')
+            st.subheader("Current Active Ban Lease Ledger")
+            st.dataframe(df_leases)
+        else:
+            st.info("No active firewall IP ban leases recorded in the database manifest.")
+    else:
+        st.info("No active firewall tracking manifest found on disk.")
 
 elif operation == "13. Compile Executive Audit Report":
     st.header("📄 Executive Security Audit Documentation Generator")
