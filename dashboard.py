@@ -40,6 +40,7 @@ def main_menu():
         print("[12] Launch Multi-threaded Asynchronous Queue Processing")
         print("[13] Run Threat Geographic IP Mapping Audit")
         print("[14] Execute Firewall Lease Pruning & Table Sweep")
+        print("[15] Execute System-Wide Automated Integration Tests")
         print("[0] Exit Dashboard")
         print("=" * 60)
         
@@ -123,13 +124,17 @@ def main_menu():
         elif choice == '14':
             import firewall_pruner
             firewall_pruner.prune_expired_firewall_rules()
+            
+        elif choice == '15':
+            import run_integration_tests
+            run_integration_tests.execute_netpulse_test_suite()
                 
         elif choice == '0':
             print("Shutting down NetPulse IDS Console. Stay secure!")
             break
             
         else:
-            print("Invalid selection. Please input a digit from 0 to 14.")
+            print("Invalid selection. Please input a digit from 0 to 15.")
             
         input("\nPress Enter to return to the main menu...")
 
