@@ -123,8 +123,22 @@ def evaluate_live_flow_prediction(flow_key, flow_data):
     if prediction == "BENIGN":
         log_incident("INFO", log_msg)
     else:
-        log_incident("CRITICAL", f"🚨 ANOMALY FLAGGED! {log_msg}")
-        # ACTIVE DEFENSE TRIGGER: Pass the attacker source IP address (index 0 of the key) directly to the kernel blocker
+        # Build a detailed diagnostic metrics layer for SIEM analysis dashboards
+        flow_context = {
+            "duration_ms": round(duration, 2),
+            "forward_packets": flow_data['fwd_packets'],
+            "backward_packets": flow_data['bwd_packets'],
+            "mean_forward_length": round(fwd_mean_len, 2),
+            "mean_iat_ms": round(mean_iat, 2)
+        }
+        
+        log_incident(
+            level="CRITICAL", 
+            message=f"🚨 ANOMALY FLAGGED! {log_msg}", 
+            attacker_ip=flow_key[0], 
+            flow_metrics=flow_context
+        )
+        
         attacker_ip = flow_key[0]
         block_malicious_ip(attacker_ip)
 
