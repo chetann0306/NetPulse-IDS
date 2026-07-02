@@ -2,17 +2,18 @@ import os
 import json
 import socket
 from datetime import datetime
+from webhook_alerter import send_soc_alert
 
 LOG_FILE = "netpulse_security_incidents.log"
 
-# Production SIEM Endpoint Configuration (Defaults to localhost loopback for testing)
+# Production SIEM Endpoint Configuration
 SIEM_HOST = "127.0.0.1"
-SIEM_PORT = 514  # Standard Enterprise Syslog Port
+SIEM_PORT = 514  
 
 def log_incident(level, message, attacker_ip=None, flow_metrics=None):
     """
-    Appends a local forensic trace copy and instantly streams structured 
-    JSON network syslog metrics out-of-band to a centralized SIEM collector.
+    Appends a local forensic trace, streams JSON syslog metrics out-of-band to a 
+    centralized SIEM, and pushes instant mobile/desktop webhook notifications.
     """
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     formatted_line = f"[{timestamp}] [{level}] {message}\n"
@@ -21,7 +22,7 @@ def log_incident(level, message, attacker_ip=None, flow_metrics=None):
     with open(LOG_FILE, "a") as f:
         f.write(formatted_line)
         
-    # 2. Build the industry-standard structured SIEM JSON object
+    # 2. Build and ship the structured SIEM JSON object via UDP
     siem_payload = {
         "@timestamp": datetime.utcnow().isoformat() + "Z",
         "log.level": level,
@@ -31,16 +32,17 @@ def log_incident(level, message, attacker_ip=None, flow_metrics=None):
         "event.category": "network_anomaly" if level in ["WARNING", "CRITICAL"] else "system_telemetry"
     }
     
-    # Inject extra data layers if flow dictionaries are supplied by the ML engine
     if flow_metrics:
         siem_payload["network.flow.metrics"] = flow_metrics
 
-    # 3. Ship the log asynchronously via UDP socket to the SIEM destination
     try:
         payload_bytes = json.dumps(siem_payload).encode('utf-8')
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.sendto(payload_bytes, (SIEM_HOST, SIEM_PORT))
         sock.close()
     except Exception:
-        # Fail silently in the background so network sniffing stays fast even if SIEM is down
         pass
+
+    # 3. Trigger Instant Webhook Notifications for high-severity events
+    if level in ["CRITICAL", "WARNING"]:
+        send_soc_alert(level, message, attacker_ip, flow_metrics)
