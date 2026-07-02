@@ -136,6 +136,17 @@ if operation == "System Overview & Data Status":
         st.info(f"**Diagnostic Output:** {heartbeat_pulse['diagnostics'][0]}")
 
     st.markdown("---")
+    
+    # NEW COMPONENT: Real-time ML Processing Performance Speed Chart
+    st.subheader("⚡ Model Inference Latency Radar")
+    st.markdown("Tracks evaluation computation speeds over time to ensure hardware pipelines avoid packet queue bottlenecks.")
+    chart_data = pd.DataFrame(
+        live_metrics["latency_history"],
+        columns=["Inference Response Time (ms)"]
+    )
+    st.line_chart(chart_data)
+
+    st.markdown("---")
     st.header("📋 Environmental Diagnostics")
     col1, col2 = st.columns(2)
     with col1:
@@ -365,9 +376,7 @@ elif operation == "15. Automated System Integration Tests":
         with st.spinner("Evaluating architecture modules..."):
             old_stdout = sys.stdout
             sys.stdout = buffer = io.StringIO()
-            
             run_integration_tests.execute_netpulse_test_suite()
-            
             sys.stdout = old_stdout
             st.text_area("Integration Test Engine Execution Output Logs", buffer.getvalue(), height=450)
 

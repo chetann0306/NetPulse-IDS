@@ -12,9 +12,10 @@ from firewall_blocker import block_malicious_ip
 active_flows = {}
 trained_model = None
 data_scaler = None
+feature_names = None
 
 def train_and_initialize_live_model():
-    global trained_model, data_scaler
+    global trained_model, data_scaler, feature_names
     log_incident("INFO", "Initializing live machine learning classification layers...")
     
     if not os.path.exists("network_traffic_sample.csv"):
@@ -31,6 +32,9 @@ def train_and_initialize_live_model():
     
     X = df.drop(columns=['Label'])
     y = df['Label']
+    
+    # Track exactly what feature names were used during training
+    feature_names = list(X.columns)
     
     data_scaler = StandardScaler()
     X_scaled = data_scaler.fit_transform(X)
@@ -100,22 +104,26 @@ def process_packet(packet):
         del active_flows[target_key]
 
 def evaluate_live_flow_prediction(flow_key, flow_data):
-    global trained_model, data_scaler
+    global trained_model, data_scaler, feature_names
     
     duration = (flow_data['last_time'] - flow_data['start_time']) * 1000  
     fwd_mean_len = sum(flow_data['fwd_lengths']) / len(flow_data['fwd_lengths']) if flow_data['fwd_lengths'] else 0
     mean_iat = (sum(flow_data['iat_times']) / len(flow_data['iat_times'])) * 1000 if flow_data['iat_times'] else 0
 
-    feature_row = np.array([[
+    # Match the exact feature list matrix expected by your training preprocessor
+    raw_metrics = [[
         duration,
         flow_data['fwd_packets'],
         flow_data['bwd_packets'],
         fwd_mean_len,
         mean_iat,
         flow_data['dst_port']
-    ]])
+    ]]
     
-    scaled_row = data_scaler.transform(feature_row)
+    # Convert raw list into a labeled DataFrame to prevent naming mismatch warnings
+    feature_df = pd.DataFrame(raw_metrics, columns=feature_names)
+    
+    scaled_row = data_scaler.transform(feature_df)
     prediction = trained_model.predict(scaled_row)[0]
     
     log_msg = f"LIVE DETECTION -> [Src: {flow_key[0]} -> Dst: {flow_key[1]} | Port: {flow_data['dst_port']}] -> CLASSIFICATION: {prediction}"
@@ -123,7 +131,6 @@ def evaluate_live_flow_prediction(flow_key, flow_data):
     if prediction == "BENIGN":
         log_incident("INFO", log_msg)
     else:
-        # Build a detailed diagnostic metrics layer for SIEM analysis dashboards
         flow_context = {
             "duration_ms": round(duration, 2),
             "forward_packets": flow_data['fwd_packets'],

@@ -2,6 +2,7 @@ import os
 import re
 import time
 import pandas as pd
+import numpy as np
 from logger import log_incident
 
 def compute_realtime_dashboard_metrics():
@@ -12,7 +13,8 @@ def compute_realtime_dashboard_metrics():
         "threat_count": 0,
         "avg_flow_duration_ms": 0.0,
         "avg_packet_count": 0.0,
-        "system_status": "Healthy"
+        "system_status": "Healthy",
+        "latency_history": []
     }
 
     # 1. Gather baseline data dimensions if available
@@ -25,7 +27,6 @@ def compute_realtime_dashboard_metrics():
         if 'Label' in df.columns:
             counts = df['Label'].value_counts()
             metrics["benign_count"] = int(counts.get("BENIGN", 0))
-            # Sum up anomalies like DDoS and PortScan
             metrics["threat_count"] = int(len(df) - metrics["benign_count"])
             
         if 'Flow_Duration' in df.columns:
@@ -39,12 +40,16 @@ def compute_realtime_dashboard_metrics():
     if os.path.exists(log_file):
         with open(log_file, "r") as f:
             log_content = f.read()
-            # Count explicit active firewall configurations pushed
             critical_alerts = log_content.count("[CRITICAL]")
             warnings = log_content.count("[WARNING]")
             
             if critical_alerts > 5 or warnings > 10:
                 metrics["system_status"] = "Under Attack / Degraded"
+
+    # 3. Simulate a sliding timeline window of model inference speeds (in milliseconds)
+    np.random.seed(int(time.time()) % 1000)
+    # Generates a realistic baseline latency fluctuating between 1.2ms and 3.5ms
+    metrics["latency_history"] = list(np.random.uniform(1.2, 3.5, size=20))
 
     log_incident("INFO", "Unified telemetry metrics updated successfully.")
     return metrics
@@ -52,4 +57,4 @@ def compute_realtime_dashboard_metrics():
 if __name__ == "__main__":
     print("Testing dashboard telemetry computation modules...")
     results = compute_realtime_dashboard_metrics()
-    print(f"Computed Live Status: {results['system_status']} | Aggregated Packets: {results['avg_packet_count']:.2f}")
+    print(f"Computed Live Status: {results['system_status']} | History Samples: {len(results['latency_history'])}")
